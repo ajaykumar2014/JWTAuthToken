@@ -1,7 +1,9 @@
 package com.example.jwt.security;
 
 import com.example.jwt.model.TokenRequestDto;
-import com.example.jwt.security.keys.ConstantKeys;
+import com.example.jwt.security.keys.RsaSigningKeys;
+import com.nimbusds.jose.jwk.JWK;
+import com.nimbusds.jose.jwk.JWKSet;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -9,41 +11,23 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.security.*;
+import javax.servlet.http.HttpServletRequest;
+import java.security.KeyPair;
+import java.security.PublicKey;
 import java.time.Instant;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 
 @Service("jwtService")
 public class JwtServiceImpl implements JwtService {
 
-    static Map KEYS = new HashMap();
-    static {
-
-        try {
-            KeyPairGenerator keyPairGenerator = null;
-            try {
-                keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            } catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-            keyPairGenerator.initialize(2048);
-
-            KeyPair keyPair = keyPairGenerator.generateKeyPair();
-
-            KEYS.put("private", keyPair.getPrivate());
-            KEYS.put("public", keyPair.getPublic());
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-    }
-
+    @Autowired
+    private RsaSigningKeys rsaSigningKeys;
 
     @Autowired
-    private ConstantKeys keys;
+    private KeyPair keyPair;
 
-
+    @Autowired
+    private JWKSet jwkSet;
 
     @Override
     public String generateToken(TokenRequestDto tokenRequest) {
@@ -54,12 +38,12 @@ public class JwtServiceImpl implements JwtService {
 
 
         return Jwts.builder()
+                .setHeaderParam("kid", "jwt-secret")
                 .setId(tokenRequest.getTokenId())
                 .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(Instant.now().plusSeconds(120)))
-                .claim(JwtConstants.JOURNEY_TYPE, StringUtils.isEmpty(tokenRequest.getJourneyType()) ?
-                        JwtConstants.ROLE.INTERNET_CUSTOMER_NTF.getRole() : tokenRequest.getJourneyType())
-                .signWith(SignatureAlgorithm.RS256, (PrivateKey)KEYS.get("private"))
+                .claim(JwtConstants.JOURNEY_TYPE, "OB-JOURNEY")
+                .setExpiration(Date.from(Instant.now().plusSeconds(1200)))
+                .signWith(SignatureAlgorithm.forName(rsaSigningKeys.getKeyType()), rsaSigningKeys.getValidSigningKey())
                 .compact();
     }
 
@@ -80,18 +64,53 @@ public class JwtServiceImpl implements JwtService {
                 .setId(StringUtils.isEmpty(tokenRequest.getTokenId()) ? claims.getId() : tokenRequest.getTokenId())
                 .setIssuedAt(claims.getIssuedAt())
                 .setExpiration(Date.from(exp))
-                .claim(JwtConstants.JOURNEY_TYPE, StringUtils.isEmpty(tokenRequest.getJourneyType()) ?
-                        claims.get(JwtConstants.JOURNEY_TYPE) : tokenRequest.getJourneyType())
-                .signWith(SignatureAlgorithm.RS256, (PrivateKey) KEYS.get("private"))
+                .claim(JwtConstants.JOURNEY_TYPE, "OB-JOURNEY")
+                .signWith(SignatureAlgorithm.RS512, keyPair.getPrivate())
                 .compact();
+    }
+
+    @Override
+    public String refreshToken(HttpServletRequest httpServletRequest, String token) {
+        String sessionId = httpServletRequest.getSession(false).getId();
+        Claims claims = parseToken(token);
+        if (claims != null && claims.getId().equals(sessionId)) {
+            return Jwts.builder()
+                    .setId(claims.getId())
+                    .setIssuedAt(claims.getIssuedAt())
+                    .setExpiration(Date.from(Instant.now().plusSeconds(120)))
+                    .setClaims(claims)
+                    .signWith(SignatureAlgorithm.RS512, keyPair.getPrivate())
+                    .compact();
+
+        }
+        return null;
     }
 
 
     @Override
-    public Claims parseToken(String token)  {
-        return Jwts.parser().setSigningKey((PublicKey) KEYS.get("public")).parseClaimsJws(token).getBody();
+    public Claims parseToken(String token) {
+        try {
+            return Jwts.parser().setSigningKey(keyPair.getPublic()).parseClaimsJws(token).getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 
+    @Override
+    public Claims parseToken(PublicKey publicKey, String token) {
+        try {
+            return Jwts.parser().setSigningKey(publicKey).parseClaimsJws(token).getBody();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    @Override
+    public JWK getSigningInKey(String kid) {
+        return jwkSet.getKeyByKeyId(kid);
+    }
 
 
 }

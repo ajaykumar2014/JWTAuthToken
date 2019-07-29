@@ -1,0 +1,37 @@
+http://blog.palominolabs.com/2011/10/18/java-2-way-tlsssl-client-certificates-and-pkcs12-vs-jks-keystores/index.html
+>>https://medium.com/@superseb/get-your-certificate-chain-right-4b117a9c0fce
+keytool -importkeystore -srckeystore jwt-auth-test.jks -destkeystore jwt-auth-test.jks -deststoretype pkcs12
+
+#Generate Private/Public Key Pair
+
+    #!/usr/bin/env bash
+
+    openssl genrsa -out private_key.pem 4096
+    openssl rsa -pubout -in private_key.pem -out public_key.pem
+
+    # convert private key to pkcs8 format in order to import it from Java
+    openssl pkcs8 -topk8 -in private_key.pem -inform pem -out private_key_pkcs8.pem -outform pem -nocrypt
+
+
+openssl req \
+       -newkey rsa:4096 -nodes -keyout domain.key \
+       -x509 -days 365 -out domain.crt
+
+openssl pkcs12 \
+       -inkey domain.key \
+       -in domain.crt \
+       -export -out domain.pfx
+
+
+
+openssl genrsa -out private_key.pem 4096
+
+openssl req \
+       -key domain.key \
+       -new \
+       -x509 -days 365 -out domain.crt
+
+openssl pkcs12 \
+       -inkey domain.key \
+       -in domain.crt \
+       -export -out domain.pfx

@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ConstantKeys {
 
-    @Value("${jwt.secret}")
+    @Value("${jwt.secret:}")
     private String key;
 
     public byte[] getValidSigningKey() {

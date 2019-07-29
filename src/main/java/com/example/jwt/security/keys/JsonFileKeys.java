@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.LocalDate;
 import java.util.Set;
 
 /**
@@ -42,7 +41,7 @@ public class JsonFileKeys {
         return null;
     }
 
-    public byte[] getValidSigningKey() {
+    /*public byte[] getValidSigningKey() {
         for (Key<String> key: allKeys) {
             if (LocalDate.now().isAfter(key.getValidFrom()) && LocalDate.now().isBefore(key.getValidTo())) {
                 return key.getSigningKey().getBytes();
@@ -61,7 +60,7 @@ public class JsonFileKeys {
                 allKeys.remove(key);
             }
         }
-    }
+    }*/
 
 
 }

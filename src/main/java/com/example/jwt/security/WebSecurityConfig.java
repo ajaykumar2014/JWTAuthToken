@@ -9,7 +9,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
-import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.access.AccessDeniedHandlerImpl;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -25,6 +24,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     protected void configure(HttpSecurity http) throws Exception {
         //Jwt Authentication protection on endpoints
         http.authorizeRequests().antMatchers(HttpMethod.GET, "/v1/exchange/token").permitAll() //TODO: add url to ignore list which will generate the token
+                .antMatchers(HttpMethod.GET,"/.well-known/jwks.json").permitAll()
                 .antMatchers(HttpMethod.GET, "/health").permitAll()
                 .anyRequest().authenticated()
                 .and().addFilterBefore(getAuthorizationFilter(), UsernamePasswordAuthenticationFilter.class)
@@ -34,7 +34,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         http.csrf().disable();
 
         //Switch off session creation
-        http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        //http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+        http.sessionManagement().sessionFixation().none();//when “none” is set, the original session will not be invalidated
     }
 
     private AccessDeniedHandlerImpl getAccessDeniedHandler() {
@@ -43,7 +44,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
         return handler;
     }
 
-    @DependsOn("loansJwtService")
+    @DependsOn("jwtService")
     private JwtAuthorizationFilter getAuthorizationFilter() throws Exception {
         return new JwtAuthorizationFilter(authenticationManager(), loansJwtService);
     }
