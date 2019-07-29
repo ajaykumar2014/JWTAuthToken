@@ -1,7 +1,5 @@
 package com.example.jwt.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.jwk.JWK;
 import io.jsonwebtoken.Claims;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,7 +14,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.Base64;
 import java.util.Collections;
 
 public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
@@ -32,7 +29,7 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest req, HttpServletResponse res, FilterChain chain) throws IOException, ServletException {
         HttpSession httpSession = req.getSession(false);
-        System.out.println("Before Session id  [ Filter ] " + (httpSession == null ? "SESSION IS NULL" : httpSession.getId()));
+        System.out.println("Before Session id  [ Filter ] "+ ( httpSession == null ? "SESSION IS NULL":httpSession.getId()) );
         String header = req.getHeader(JwtConstants.JWT_HEADER_NAME);
 
         if (header == null) {
@@ -46,7 +43,7 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
 
         chain.doFilter(req, res);
         httpSession = req.getSession(false);
-        System.out.println("After Session id  [ Filter ] " + (httpSession == null ? "SESSION IS NULL" : httpSession.getId()));
+        System.out.println("After Session id  [ Filter ] "+ ( httpSession == null ? "SESSION IS NULL":httpSession.getId()) );
 
     }
 
@@ -55,26 +52,14 @@ public class JwtAuthorizationFilter extends BasicAuthenticationFilter {
         String token = request.getHeader(JwtConstants.JWT_HEADER_NAME);
 
         if (token != null) {
-            String kid = null;
-            // parse the token.
-            try {
-                kid = new ObjectMapper().readTree(Base64.getDecoder().decode(token.split("\\.")[0])).get("kid").asText();
-            } catch (IOException e) {
-                e.printStackTrace();
+            Claims claims = jwtService.parseToken(token);
+
+            if (claims != null) {
+                return new UsernamePasswordAuthenticationToken(claims.getId(),
+                        null,
+                        Collections.singleton(new SimpleGrantedAuthority(claims.get(JwtConstants.JOURNEY_TYPE).toString())));
             }
-
-            if(kid !=null && !kid.isEmpty()) {
-                JWK jwk = jwtService.getSigningInKey(kid);
-                Claims claims = jwtService.parseToken(jwk.getParsedX509CertChain().get(0).getPublicKey(),token);
-
-                if (claims != null) {
-                    return new UsernamePasswordAuthenticationToken(claims.getId(),
-                            null,
-                            Collections.singleton(new SimpleGrantedAuthority(claims.get(JwtConstants.JOURNEY_TYPE).toString())));
-                }
-                return null;
-
-            }
+            return null;
         }
         return null;
     }

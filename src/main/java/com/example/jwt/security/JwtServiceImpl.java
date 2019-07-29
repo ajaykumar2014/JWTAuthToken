@@ -2,8 +2,6 @@ package com.example.jwt.security;
 
 import com.example.jwt.model.TokenRequestDto;
 import com.example.jwt.security.keys.RsaSigningKeys;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -13,7 +11,6 @@ import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.security.KeyPair;
-import java.security.PublicKey;
 import java.time.Instant;
 import java.util.Date;
 
@@ -25,9 +22,6 @@ public class JwtServiceImpl implements JwtService {
 
     @Autowired
     private KeyPair keyPair;
-
-    @Autowired
-    private JWKSet jwkSet;
 
     @Override
     public String generateToken(TokenRequestDto tokenRequest) {
@@ -97,20 +91,6 @@ public class JwtServiceImpl implements JwtService {
         return null;
     }
 
-    @Override
-    public Claims parseToken(PublicKey publicKey, String token) {
-        try {
-            return Jwts.parser().setSigningKey(publicKey).parseClaimsJws(token).getBody();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
-
-    @Override
-    public JWK getSigningInKey(String kid) {
-        return jwkSet.getKeyByKeyId(kid);
-    }
 
 
 }

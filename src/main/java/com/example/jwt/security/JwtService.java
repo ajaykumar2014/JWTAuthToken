@@ -15,9 +15,7 @@ public interface JwtService {
 
     String refreshToken(HttpServletRequest httpServletRequest,String token);
     Claims parseToken(String token);
-    Claims parseToken(PublicKey publicKey, String token);
 
-    JWK getSigningInKey(String kid);
 
 
 }

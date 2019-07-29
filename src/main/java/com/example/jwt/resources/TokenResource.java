@@ -22,14 +22,6 @@ public class TokenResource {
     @Autowired
     private JwtService jwtService;
 
-    @Autowired
-    private JWKSet jwkSet;
-
-    @GetMapping(value = "/.well-known/jwks.json",produces = MediaType.APPLICATION_JSON_UTF8_VALUE)
-    public ResponseEntity<?> keys() {
-        return ResponseEntity.ok(this.jwkSet.toString());
-    }
-
     @GetMapping(value = "/v1/exchange/token")
     public ResponseEntity<?> getToken(HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
         HttpSession httpSession = httpServletRequest.getSession();
